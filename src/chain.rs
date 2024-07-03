@@ -14,8 +14,8 @@ pub use {
     },
 };
 
-use bitcoin::blockdata::constants::genesis_block;
 pub use bitcoin::network::Network as BNetwork;
+use bitcoin::{blockdata::constants::genesis_block, TestnetVersion as BTestnetVersion};
 
 #[cfg(not(feature = "liquid"))]
 pub type Value = u64;
@@ -27,7 +27,7 @@ pub enum Network {
     #[cfg(not(feature = "liquid"))]
     Bitcoin,
     #[cfg(not(feature = "liquid"))]
-    Testnet,
+    Testnet(TestnetVersion),
     #[cfg(not(feature = "liquid"))]
     Regtest,
     #[cfg(not(feature = "liquid"))]
@@ -39,6 +39,15 @@ pub enum Network {
     LiquidTestnet,
     #[cfg(feature = "liquid")]
     LiquidRegtest,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Hash, Serialize, Ord, PartialOrd, Eq)]
+pub enum TestnetVersion {
+    /// Testnet version 3.
+    V3,
+    /// Testnet version 4.
+    /// This is the latest testnet version.
+    V4,
 }
 
 impl Network {
@@ -97,6 +106,7 @@ impl Network {
         return vec![
             "mainnet".to_string(),
             "testnet".to_string(),
+            "testnet4".to_string(),
             "regtest".to_string(),
             "signet".to_string(),
         ];
@@ -121,8 +131,12 @@ pub fn bitcoin_genesis_hash(network: BNetwork) -> bitcoin::BlockHash {
     lazy_static! {
         static ref BITCOIN_GENESIS: bitcoin::BlockHash =
             genesis_block(BNetwork::Bitcoin).block_hash();
+            // TESTNET_GENESIS is BlockHash of testnet3
         static ref TESTNET_GENESIS: bitcoin::BlockHash =
-            genesis_block(BNetwork::Testnet).block_hash();
+            genesis_block(BNetwork::Testnet(BTestnetVersion::V3)).block_hash();
+            // TESTNET4_GENESIS is BlockHash of testnet4
+        static ref TESTNET4_GENESIS: bitcoin::BlockHash =
+            genesis_block(BNetwork::Testnet(BTestnetVersion::V4)).block_hash();
         static ref REGTEST_GENESIS: bitcoin::BlockHash =
             genesis_block(BNetwork::Regtest).block_hash();
         static ref SIGNET_GENESIS: bitcoin::BlockHash =
@@ -130,7 +144,8 @@ pub fn bitcoin_genesis_hash(network: BNetwork) -> bitcoin::BlockHash {
     }
     match network {
         BNetwork::Bitcoin => *BITCOIN_GENESIS,
-        BNetwork::Testnet => *TESTNET_GENESIS,
+        BNetwork::Testnet(BTestnetVersion::V3) => *TESTNET_GENESIS,
+        BNetwork::Testnet(BTestnetVersion::V4) => *TESTNET4_GENESIS,
         BNetwork::Regtest => *REGTEST_GENESIS,
         BNetwork::Signet => *SIGNET_GENESIS,
         _ => panic!("unknown network {:?}", network),
@@ -163,7 +178,9 @@ impl From<&str> for Network {
             #[cfg(not(feature = "liquid"))]
             "mainnet" => Network::Bitcoin,
             #[cfg(not(feature = "liquid"))]
-            "testnet" => Network::Testnet,
+            "testnet" => Network::Testnet(TestnetVersion::V3),
+            #[cfg(not(feature = "liquid"))]
+            "testnet4" => Network::Testnet(TestnetVersion::V4),
             #[cfg(not(feature = "liquid"))]
             "regtest" => Network::Regtest,
             #[cfg(not(feature = "liquid"))]
@@ -186,7 +203,8 @@ impl From<Network> for BNetwork {
     fn from(network: Network) -> Self {
         match network {
             Network::Bitcoin => BNetwork::Bitcoin,
-            Network::Testnet => BNetwork::Testnet,
+            Network::Testnet(TestnetVersion::V3) => BNetwork::Testnet(BTestnetVersion::V3),
+            Network::Testnet(TestnetVersion::V4) => BNetwork::Testnet(BTestnetVersion::V4),
             Network::Regtest => BNetwork::Regtest,
             Network::Signet => BNetwork::Signet,
         }
@@ -198,10 +216,24 @@ impl From<BNetwork> for Network {
     fn from(network: BNetwork) -> Self {
         match network {
             BNetwork::Bitcoin => Network::Bitcoin,
-            BNetwork::Testnet => Network::Testnet,
+            BNetwork::Testnet(BTestnetVersion::V3) => Network::Testnet(TestnetVersion::V3),
+            BNetwork::Testnet(BTestnetVersion::V4) => Network::Testnet(TestnetVersion::V4),
             BNetwork::Regtest => Network::Regtest,
             BNetwork::Signet => Network::Signet,
             _ => panic!("unknown network {:?}", network),
+        }
+    }
+}
+
+#[cfg(not(feature = "liquid"))]
+impl From<Network> for &'static bitcoin::params::Params {
+    fn from(network: Network) -> Self {
+        match network {
+            Network::Bitcoin => &bitcoin::params::MAINNET,
+            Network::Testnet(TestnetVersion::V3) => &bitcoin::params::TESTNET,
+            Network::Testnet(TestnetVersion::V4) => &bitcoin::params::TESTNET4,
+            Network::Regtest => &bitcoin::params::REGTEST,
+            Network::Signet => &bitcoin::params::SIGNET,
         }
     }
 }

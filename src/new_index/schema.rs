@@ -831,7 +831,7 @@ impl ChainQuery {
         let _timer = self.start_timer("lookup_txn");
         self.lookup_raw_txn(txid, blockhash).map(|rawtx| {
             let txn: Transaction = deserialize(&rawtx).expect("failed to parse Transaction");
-            assert_eq!(*txid, txn.txid());
+            assert_eq!(*txid, txn.compute_txid());
             txn
         })
     }
@@ -1003,7 +1003,7 @@ fn add_blocks(block_entries: &[BlockEntry], iconfig: &IndexerConfig) -> Vec<DBRo
         .map(|b| {
             let mut rows = vec![];
             let blockhash = full_hash(&b.entry.hash()[..]);
-            let txids: Vec<Txid> = b.block.txdata.iter().map(|tx| tx.txid()).collect();
+            let txids: Vec<Txid> = b.block.txdata.iter().map(|tx| tx.compute_txid()).collect();
             for tx in &b.block.txdata {
                 add_transaction(tx, blockhash, &mut rows, iconfig);
             }
@@ -1033,7 +1033,7 @@ fn add_transaction(
         rows.push(TxRow::new(tx).into_row());
     }
 
-    let txid = full_hash(&tx.txid()[..]);
+    let txid = full_hash(&tx.compute_txid()[..]);
     for (txo_index, txo) in tx.output.iter().enumerate() {
         if is_spendable(txo) {
             rows.push(TxOutRow::new(&txid, txo_index, txo).into_row());
@@ -1120,7 +1120,7 @@ fn index_transaction(
     //      H{funding-scripthash}{spending-height}S{spending-txid:vin}{funding-txid:vout} → ""
     // persist "edges" for fast is-this-TXO-spent check
     //      S{funding-txid:vout}{spending-txid:vin} → ""
-    let txid = full_hash(&tx.txid()[..]);
+    let txid = full_hash(&tx.compute_txid()[..]);
     for (txo_index, txo) in tx.output.iter().enumerate() {
         if is_spendable(txo) || iconfig.index_unspendables {
             let history = TxHistoryRow::new(
@@ -1221,7 +1221,7 @@ struct TxRow {
 
 impl TxRow {
     fn new(txn: &Transaction) -> TxRow {
-        let txid = full_hash(&txn.txid()[..]);
+        let txid = full_hash(&txn.compute_txid()[..]);
         TxRow {
             key: TxRowKey { code: b'T', txid },
             value: serialize(txn),
@@ -1254,7 +1254,7 @@ struct TxConfRow {
 
 impl TxConfRow {
     fn new(txn: &Transaction, blockhash: FullHash) -> TxConfRow {
-        let txid = full_hash(&txn.txid()[..]);
+        let txid = full_hash(&txn.compute_txid()[..]);
         TxConfRow {
             key: TxConfKey {
                 code: b'C',
