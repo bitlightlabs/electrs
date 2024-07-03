@@ -81,8 +81,9 @@ struct BlockValue {
 
 impl BlockValue {
     #[cfg_attr(feature = "liquid", allow(unused_variables))]
-    fn new(blockhm: BlockHeaderMeta) -> Self {
+    fn new(blockhm: BlockHeaderMeta, network: Network) -> Self {
         let header = blockhm.header_entry.header();
+        let bnetwork: bitcoin::Network = network.into();
         BlockValue {
             id: header.block_hash(),
             height: blockhm.header_entry.height() as u32,
@@ -107,7 +108,7 @@ impl BlockValue {
             #[cfg(not(feature = "liquid"))]
             nonce: header.nonce,
             #[cfg(not(feature = "liquid"))]
-            difficulty: header.difficulty_float(),
+            difficulty: header.difficulty_float(bnetwork),
 
             #[cfg(feature = "liquid")]
             ext: Some(header.ext.clone()),
@@ -158,7 +159,7 @@ impl TransactionValue {
         let weight = weight.to_wu();
 
         TransactionValue {
-            txid: tx.txid(),
+            txid: tx.compute_txid(),
             #[cfg(not(feature = "liquid"))]
             version: tx.version.0 as u32,
             #[cfg(feature = "liquid")]
@@ -319,7 +320,7 @@ impl TxOutValue {
             "v0_p2wsh"
         } else if script.is_p2tr() {
             "v1_p2tr"
-        } else if script.is_provably_unspendable() {
+        } else if script.is_op_return() {
             "provably_unspendable"
         } else {
             "unknown"
@@ -618,7 +619,7 @@ fn handle_request(
 
         (&Method::GET, Some(&"blocks"), start_height, None, None, None) => {
             let start_height = start_height.and_then(|height| height.parse::<usize>().ok());
-            blocks(&query, start_height)
+            blocks(&query, start_height, config.network_type)
         }
         (&Method::GET, Some(&"block-height"), Some(height), None, None, None) => {
             let height = height.parse::<usize>()?;
@@ -635,7 +636,7 @@ fn handle_request(
                 .chain()
                 .get_block_with_meta(&hash)
                 .ok_or_else(|| HttpError::not_found("Block not found".to_string()))?;
-            let block_value = BlockValue::new(blockhm);
+            let block_value = BlockValue::new(blockhm, config.network_type);
             json_response(block_value, TTL_LONG)
         }
         (&Method::GET, Some(&"block"), Some(hash), Some(&"status"), None, None) => {
@@ -1154,7 +1155,11 @@ fn json_response<T: Serialize>(value: T, ttl: u32) -> Result<Response<Body>, Htt
         .unwrap())
 }
 
-fn blocks(query: &Query, start_height: Option<usize>) -> Result<Response<Body>, HttpError> {
+fn blocks(
+    query: &Query,
+    start_height: Option<usize>,
+    network: Network,
+) -> Result<Response<Body>, HttpError> {
     let mut values = Vec::new();
     let mut current_hash = match start_height {
         Some(height) => *query
@@ -1174,7 +1179,7 @@ fn blocks(query: &Query, start_height: Option<usize>) -> Result<Response<Body>, 
         current_hash = blockhm.header_entry.header().prev_blockhash;
 
         #[allow(unused_mut)]
-        let mut value = BlockValue::new(blockhm);
+        let mut value = BlockValue::new(blockhm, network);
 
         #[cfg(feature = "liquid")]
         {
@@ -1266,12 +1271,12 @@ impl From<hex::HexToArrayError> for HttpError {
         HttpError::from("Invalid hex string".to_string())
     }
 }
-impl From<bitcoin::address::Error> for HttpError {
-    fn from(_e: bitcoin::address::Error) -> Self {
-        //HttpError::from(e.description().to_string())
-        HttpError::from("Invalid Bitcoin address".to_string())
-    }
-}
+// impl From<bitcoin::hex_conservative::HexToArrayError> for HttpError {
+//     fn from(_e: bitcoin::address::Error) -> Self {
+//         //HttpError::from(e.description().to_string())
+//         HttpError::from("Invalid Bitcoin address".to_string())
+//     }
+// }
 impl From<errors::Error> for HttpError {
     fn from(e: errors::Error) -> Self {
         warn!("errors::Error: {:?}", e);

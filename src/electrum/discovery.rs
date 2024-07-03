@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use electrum_client::ElectrumApi;
 
-use crate::chain::Network;
+use crate::chain::{Network, TestnetVersion};
 use crate::electrum::{Client, Hostname, Port, ProtocolVersion, ServerFeatures};
 use crate::errors::{Result, ResultExt};
 use crate::util::spawn_thread;
@@ -534,14 +534,14 @@ mod tests {
         let features = ServerFeatures {
             hosts: serde_json::from_str("{\"test.foobar.example\":{\"tcp_port\":60002}}").unwrap(),
             server_version: format!("electrs-esplora 9"),
-            genesis_hash: genesis_hash(Network::Testnet),
+            genesis_hash: genesis_hash(Network::Testnet(TestnetVersion::V3)),
             protocol_min: PROTOCOL_VERSION,
             protocol_max: PROTOCOL_VERSION,
             hash_function: "sha256".into(),
             pruning: None,
         };
         let discovery = Arc::new(DiscoveryManager::new(
-            Network::Testnet,
+            Network::Testnet(TestnetVersion::V3),
             features,
             PROTOCOL_VERSION,
             false,

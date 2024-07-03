@@ -403,7 +403,7 @@ pub fn add_default_servers(discovery: &DiscoveryManager, network: Network) {
                 .ok();
         }
         #[cfg(not(feature = "liquid"))]
-        Network::Testnet => {
+        Network::Testnet(TestnetVersion::V3) => {
             discovery
                 .add_default_server(
                     "hsmithsxurybd7uh.onion".into(),
