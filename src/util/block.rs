@@ -25,6 +25,43 @@ pub struct BlockId {
     pub time: u32,
 }
 
+/// Represents a block header detail in the blockchain.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockHeaderDetail {
+    /// The block hash (same as provided).
+    hash: String,
+    /// The number of confirmations, or -1 if the block is not on the main chain.
+    confirmations: i64,
+    /// The block height or index.
+    height: u64,
+    /// The block version.
+    version: u32,
+    /// The block version formatted in hexadecimal.
+    #[serde(rename = "versionHex")]
+    version_hex: String,
+    /// The merkle root.
+    merkleroot: String,
+    /// The block time expressed in UNIX epoch time.
+    time: u64,
+    /// The median block time expressed in UNIX epoch time.
+    mediantime: u64,
+    /// The nonce.
+    nonce: u64,
+    /// The bits.
+    bits: String,
+    /// The difficulty.
+    difficulty: f64,
+    /// Expected number of hashes required to produce the current chain.
+    chainwork: String,
+    /// The number of transactions in the block.
+    #[serde(rename = "nTx")]
+    n_tx: u32,
+    /// The hash of the previous block.
+    previousblockhash: Option<String>,
+    /// The hash of the next block.
+    nextblockhash: Option<String>,
+}
+
 impl From<&HeaderEntry> for BlockId {
     fn from(header: &HeaderEntry) -> Self {
         BlockId {

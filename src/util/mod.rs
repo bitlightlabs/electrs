@@ -8,6 +8,7 @@ pub mod fees;
 
 pub use self::block::{
     BlockHeaderMeta, BlockId, BlockMeta, BlockStatus, HeaderEntry, HeaderList, DEFAULT_BLOCKHASH,
+    BlockHeaderDetail,
 };
 pub use self::fees::get_tx_fee;
 pub use self::script::{get_innerscripts, ScriptToAddr, ScriptToAsm};

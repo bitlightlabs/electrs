@@ -20,7 +20,7 @@ use elements::encode::{deserialize, serialize_hex};
 use crate::chain::{Block, BlockHash, BlockHeader, Network, Transaction, Txid};
 use crate::metrics::{HistogramOpts, HistogramVec, Metrics};
 use crate::signal::Waiter;
-use crate::util::{HeaderList, DEFAULT_BLOCKHASH};
+use crate::util::{BlockHeaderDetail, HeaderList, DEFAULT_BLOCKHASH};
 
 use crate::errors::*;
 
@@ -581,6 +581,16 @@ impl Daemon {
                 Some((*target, feerate * 100_000f64))
             })
             .collect())
+    }
+
+    pub fn get_block_header_detail(&self, blockhash: &BlockHash) -> Result<BlockHeaderDetail> {
+        let header_value: Value =
+            self.request("getblockheader", json!([blockhash, /*verbose=*/ true]))?;
+
+        let header_detail = serde_json::from_value(header_value)
+            .map_err(|e| Error::from_kind(ErrorKind::Msg(e.to_string())))?;
+
+        Ok(header_detail)
     }
 
     fn get_all_headers(&self, tip: &BlockHash) -> Result<Vec<BlockHeader>> {

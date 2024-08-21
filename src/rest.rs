@@ -644,6 +644,11 @@ fn handle_request(
             let ttl = ttl_by_depth(status.height, query);
             json_response(status, ttl)
         }
+        (&Method::GET, Some(&"block"), Some(hash), Some(&"header_detail"), None, None) => {
+            let hash = BlockHash::from_str(hash)?;
+            let block_header_detail = query.chain().get_block_header_detail(&hash)?;
+            json_response(block_header_detail, TTL_SHORT)
+        }
         (&Method::GET, Some(&"block"), Some(hash), Some(&"txids"), None, None) => {
             let hash = BlockHash::from_str(hash)?;
             let txids = query

@@ -21,9 +21,6 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
-use crate::chain::{
-    BlockHash, BlockHeader, Network, OutPoint, Script, Transaction, TxOut, Txid, Value,
-};
 use crate::config::Config;
 use crate::daemon::Daemon;
 use crate::errors::*;
@@ -31,6 +28,10 @@ use crate::metrics::{Gauge, HistogramOpts, HistogramTimer, HistogramVec, MetricO
 use crate::util::{
     bincode, full_hash, has_prevout, is_spendable, BlockHeaderMeta, BlockId, BlockMeta,
     BlockStatus, Bytes, HeaderEntry, HeaderList, ScriptToAddr,
+};
+use crate::{
+    chain::{BlockHash, BlockHeader, Network, OutPoint, Script, Transaction, TxOut, Txid, Value},
+    util::BlockHeaderDetail,
 };
 
 use crate::new_index::db::{DBFlush, DBRow, ReverseScanIterator, ScanIterator, DB};
@@ -918,6 +919,11 @@ impl ChainQuery {
                         .map(|h| *h.hash()),
                 )
             })
+    }
+
+    pub fn get_block_header_detail(&self, hash: &BlockHash) -> Result<BlockHeaderDetail> {
+        let _timer = self.start_timer("get_block_header_details");
+        self.daemon.get_block_header_detail(hash)
     }
 
     #[cfg(not(feature = "liquid"))]
