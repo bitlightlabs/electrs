@@ -855,6 +855,23 @@ impl ChainQuery {
         }
     }
 
+    pub fn lookup_raw_verbose_txn(
+        &self,
+        txid: &Txid,
+        blockhash: Option<&BlockHash>,
+    ) -> Result<serde_json::Value> {
+        let _timer = self.start_timer("lookup_raw_verbose_txn");
+
+        let queried_blockhash =
+            blockhash.map_or_else(|| self.tx_confirming_block(txid).map(|b| b.hash), |_| None);
+        let blockhash = blockhash
+            .or_else(|| queried_blockhash.as_ref())
+            .chain_err(|| Error::from_kind(ErrorKind::Msg("missing blockhash".to_string())))?;
+
+        let txval = self.daemon.gettransaction_raw(txid, blockhash, true)?;
+        Ok(txval)
+    }
+
     pub fn lookup_txo(&self, outpoint: &OutPoint) -> Option<TxOut> {
         let _timer = self.start_timer("lookup_txo");
         lookup_txo(&self.store.txstore_db, outpoint)

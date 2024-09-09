@@ -364,9 +364,19 @@ impl Connection {
             None => false,
         };
 
-        // FIXME: implement verbose support
         if verbose {
-            bail!("verbose transactions are currently unsupported");
+            let blockhash = self
+                .query
+                .chain()
+                .tx_confirming_block(&tx_hash)
+                .map(|b| b.hash);
+
+            let txval = self
+                .query
+                .chain()
+                .lookup_raw_verbose_txn(&tx_hash, blockhash.as_ref())?;
+
+            return Ok(txval);
         }
 
         let rawtx = self
