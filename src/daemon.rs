@@ -521,7 +521,7 @@ impl Daemon {
     pub fn gettransaction_raw(
         &self,
         txid: &Txid,
-        blockhash: &BlockHash,
+        blockhash: Option<&BlockHash>,
         verbose: bool,
     ) -> Result<Value> {
         self.request("getrawtransaction", json!([txid, verbose, blockhash]))
