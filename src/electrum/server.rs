@@ -374,7 +374,16 @@ impl Connection {
             let txval = self
                 .query
                 .chain()
-                .lookup_raw_verbose_txn(&tx_hash, blockhash.as_ref())?;
+                .lookup_raw_verbose_txn(&tx_hash, blockhash.as_ref())
+                .map_err(|e| {
+                    let err_msg = e.to_string();
+                    // No such mempool or blockchain transaction
+                    // FOR: RLN
+                    if err_msg.contains("No such") && err_msg.contains("transaction") {
+                        return "No such mempool or blockchain transaction".into();
+                    }
+                    e
+                })?;
 
             return Ok(txval);
         }
